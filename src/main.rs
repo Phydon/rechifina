@@ -1,3 +1,4 @@
+// TODO create costum errors
 use clap::{Arg, ArgAction, Command};
 use colored::*;
 use flexi_logger::{detailed_format, Duplicate, FileSpec, Logger};
@@ -115,31 +116,16 @@ fn rechifina() -> Command {
         )
 }
 
-// TODO create costum errors
 fn replace_chars(mut args: Vec<&str>) -> io::Result<()> {
     if let Some(p) = args.pop() {
         let path = Path::new(p);
         let replace_char = args[0];
         let new_char = args[1];
-        let mut new_name = String::new();
-        // TODO check if path is file or dir
-        // if dir, go through all files in that dir
-        // after user has confirmed
-        // if file, check for given char in arg and
-        // try to replace it with the second given arg
-        if path.exists() {
-            match path.to_str() {
-                Some(name) => {
-                    let rpl_name = name.replace(replace_char, new_char);
-                    new_name.push_str(&rpl_name);
-                }
-                None => {
-                    error!("Non UTF-8 string found. Path must be valid unicode");
-                    process::exit(1);
-                }
-            }
 
+        if path.exists() {
             if path.is_file() {
+                let new_name = get_new_name(replace_char, new_char, path);
+                let new_path = Path::new(&new_name);
                 let msg = format!(
                     "{} {} {} {} {}\n{} {} {} {}",
                     "Do you really want to replace the chars in".red().bold(),
@@ -152,15 +138,11 @@ fn replace_chars(mut args: Vec<&str>) -> io::Result<()> {
                     new_name.italic().green(),
                     "]".yellow(),
                 );
+
                 if confirm(&msg) {
-                    if let Err(err) = rename_path(replace_char, new_char, path) {
-                        error!(
-                            "Unable to rename path: {} because of an err: {}",
-                            path.display(),
-                            err
-                        );
-                        process::exit(1);
-                    }
+                    // TODO
+                    println!("{}", new_path.display());
+                    // fs::rename(path, new_path)?;
                 } else {
                     println!("{}", "Nevermind then".dimmed());
                     process::exit(0);
@@ -174,6 +156,7 @@ fn replace_chars(mut args: Vec<&str>) -> io::Result<()> {
                     "]".yellow(),
                     "? (y/n)".red().bold(),
                 );
+
                 if confirm(&msg) {
                     if fs::read_dir(path)?.count() == 0 {
                         warn!(
@@ -181,19 +164,16 @@ fn replace_chars(mut args: Vec<&str>) -> io::Result<()> {
                             path.display().to_string().italic()
                         );
                     }
+
                     for entry in fs::read_dir(path)? {
                         let entry = entry?;
+
                         if entry.path().is_file() {
-                            if let Err(err) =
-                                rename_path(replace_char, new_char, entry.path().as_path())
-                            {
-                                error!(
-                                    "Unable to rename path: {} because of an err: {}",
-                                    path.display(),
-                                    err
-                                );
-                                process::exit(1);
-                            }
+                            let new_name = get_new_name(replace_char, new_char, &entry.path());
+                            let new_path = Path::new(&new_name);
+                            // TODO
+                            println!("{}", new_path.display());
+                            // fs::rename(path, new_path)?;
                         }
                     }
                 } else {
@@ -218,20 +198,41 @@ fn replace_chars(mut args: Vec<&str>) -> io::Result<()> {
     Ok(())
 }
 
-fn rename_path(replace_char: &str, new_char: &str, path: &Path) -> io::Result<()> {
-    match path.to_str() {
-        Some(name) => {
-            let new_name = name.replace(replace_char, new_char);
-            println!("{}", new_name);
-            // fs::rename(path, new_path)?;
-        }
+fn get_new_name(replace_char: &str, new_char: &str, path: &Path) -> String {
+    let mut new_name = String::new();
+
+    let extension = path
+        .extension()
+        .unwrap_or_else(|| {
+            error!("Not a valid file. Missing extension");
+            process::exit(1);
+        })
+        .to_str()
+        .unwrap_or_else(|| {
+            error!("Not a valid file. Missing extension");
+            process::exit(1);
+        });
+
+    match path.file_stem() {
+        Some(filestem_as_osstr) => match filestem_as_osstr.to_str() {
+            Some(filestem_as_str) => {
+                let rpl_name = filestem_as_str.replace(replace_char, new_char);
+                new_name.push_str(&rpl_name);
+                new_name.push_str(".");
+                new_name.push_str(extension);
+            }
+            None => {
+                error!("Non UTF-8 string found. Path must be valid unicode");
+                process::exit(1);
+            }
+        },
         None => {
-            error!("Non UTF-8 string found. Path must be valid unicode");
+            error!("No valid &OsStr found");
             process::exit(1);
         }
     }
 
-    Ok(())
+    new_name
 }
 
 fn confirm(msg: &str) -> bool {
