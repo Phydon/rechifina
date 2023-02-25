@@ -43,52 +43,49 @@ fn main() {
 
     // handle arguments
     let matches = rechifina().get_matches();
-    match matches.subcommand() {
-        Some(("replace", sub_matches)) => {
-            let args: Vec<&str> = sub_matches
-                .get_many::<String>("")
-                .unwrap()
-                .map(|s| s.as_str())
-                .collect();
-            if let Err(err) = replace_chars(args) {
-                error!("Error executing cmds: {}", err);
-                process::exit(1);
-            }
+    if let Some(args) = matches.get_many::<String>("") {
+        let arg_collection = args.map(|s| s.as_str()).collect::<Vec<&str>>();
+
+        if let Err(err) = replace_chars(arg_collection) {
+            error!("Error executing cmds: {}", err);
+            process::exit(1);
         }
-        Some(("log", _)) => {
-            if let Ok(logs) = show_log_file(&config_dir) {
-                println!("{}", "Available logs:".bold().yellow());
-                println!("{}", logs);
-            } else {
-                error!("Unable to read logs");
-                process::exit(1);
+    } else {
+        match matches.subcommand() {
+            Some(("replace", sub_matches)) => {
+                let args: Vec<&str> = sub_matches
+                    .get_many::<String>("")
+                    .unwrap()
+                    .map(|s| s.as_str())
+                    .collect();
+                if let Err(err) = replace_chars(args) {
+                    error!("Error executing cmds: {}", err);
+                    process::exit(1);
+                }
             }
+            Some(("log", _)) => {
+                if let Ok(logs) = show_log_file(&config_dir) {
+                    println!("{}", "Available logs:".bold().yellow());
+                    println!("{}", logs);
+                } else {
+                    error!("Unable to read logs");
+                    process::exit(1);
+                }
+            }
+            _ => unreachable!(),
         }
-        _ => unreachable!(),
     }
 }
 
 fn rechifina() -> Command {
     Command::new("rechifina")
         .visible_aliases(["rech", "refina"])
+        .bin_name("rechifina")
         .about("Replace a given char from a filename with another given char")
         .version("1.0.0")
         .author("Leann Phydon <leann.phydon@gmail.com")
-        // TODO subcommand/arg needed??
-        .subcommand_required(true)
         .arg_required_else_help(true)
-        // FIXME
-        .subcommand(
-            Command::new("replace")
-                .short_flag('r')
-                .about("Replace chars")
-                .arg(
-                    Arg::new("replace")
-                        .action(ArgAction::Set)
-                        .num_args(3)
-                        .short('r'),
-                ),
-        )
+        .arg(Arg::new("").action(ArgAction::Set).num_args(3).short('r'))
         .subcommand(
             Command::new("log")
                 .short_flag('l')
@@ -103,6 +100,7 @@ fn replace_chars(mut args: Vec<&str>) -> io::Result<()> {
         warn!("About to replace chars in filenames");
         if let Some(p) = args.pop() {
             let path = Path::new(p).to_path_buf();
+            println!("{:?}", path.display());
             // TODO check if path is file or dir
             // if dir go through all files in that dir
             // if file check for given char in arg and
@@ -113,6 +111,7 @@ fn replace_chars(mut args: Vec<&str>) -> io::Result<()> {
         }
     } else {
         println!("{}", "Nevermind then".dimmed());
+        process::exit(0);
     }
 
     Ok(())
