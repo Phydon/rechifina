@@ -1,7 +1,7 @@
 use clap::{Arg, ArgAction, Command};
 use colored::*;
 use flexi_logger::{detailed_format, Duplicate, FileSpec, Logger};
-use log::{error, info, warn};
+use log::{error, warn};
 
 use std::{
     fs, io,
@@ -115,25 +115,120 @@ fn rechifina() -> Command {
         )
 }
 
+// TODO create costum errors
 fn replace_chars(mut args: Vec<&str>) -> io::Result<()> {
-    info!("Started");
-    let msg = "Do you really want to replace the chars in the given filenames? (y/n)";
-    if confirm(msg) {
-        warn!("About to replace chars in filenames");
-        if let Some(p) = args.pop() {
-            let path = Path::new(p).to_path_buf();
-            println!("{:?}", path.display());
-            // TODO check if path is file or dir
-            // if dir go through all files in that dir
-            // if file check for given char in arg and
-            // try to replace it with the second given arg
+    if let Some(p) = args.pop() {
+        let path = Path::new(p);
+        let replace_char = args[0];
+        let new_char = args[1];
+        let mut new_name = String::new();
+        // TODO check if path is file or dir
+        // if dir, go through all files in that dir
+        // after user has confirmed
+        // if file, check for given char in arg and
+        // try to replace it with the second given arg
+        if path.exists() {
+            match path.to_str() {
+                Some(name) => {
+                    let rpl_name = name.replace(replace_char, new_char);
+                    new_name.push_str(&rpl_name);
+                }
+                None => {
+                    error!("Non UTF-8 string found. Path must be valid unicode");
+                    process::exit(1);
+                }
+            }
+
+            if path.is_file() {
+                let msg = format!(
+                    "{} {} {} {} {}\n{} {} {} {}",
+                    "Do you really want to replace the chars in".red().bold(),
+                    "[".yellow(),
+                    path.display().to_string().italic(),
+                    "]".yellow(),
+                    "? (y/n)".red().bold(),
+                    "The new path would look like this:".red().bold(),
+                    "[".yellow(),
+                    new_name.italic().green(),
+                    "]".yellow(),
+                );
+                if confirm(&msg) {
+                    if let Err(err) = rename_path(replace_char, new_char, path) {
+                        error!(
+                            "Unable to rename path: {} because of an err: {}",
+                            path.display(),
+                            err
+                        );
+                        process::exit(1);
+                    }
+                } else {
+                    println!("{}", "Nevermind then".dimmed());
+                    process::exit(0);
+                }
+            } else if path.is_dir() {
+                let msg = format!(
+                    "{} {} {} {} {}",
+                    "Do you really want to replace the chars in".red().bold(),
+                    "[".yellow(),
+                    path.display().to_string().italic(),
+                    "]".yellow(),
+                    "? (y/n)".red().bold(),
+                );
+                if confirm(&msg) {
+                    if fs::read_dir(path)?.count() == 0 {
+                        warn!(
+                            "The given Directory {} is empty",
+                            path.display().to_string().italic()
+                        );
+                    }
+                    for entry in fs::read_dir(path)? {
+                        let entry = entry?;
+                        if entry.path().is_file() {
+                            if let Err(err) =
+                                rename_path(replace_char, new_char, entry.path().as_path())
+                            {
+                                error!(
+                                    "Unable to rename path: {} because of an err: {}",
+                                    path.display(),
+                                    err
+                                );
+                                process::exit(1);
+                            }
+                        }
+                    }
+                } else {
+                    println!("{}", "Nevermind then".dimmed());
+                    process::exit(0);
+                }
+            } else {
+                error!("Path is not a file or directory");
+                process::exit(1);
+            }
         } else {
-            error!("Missing path argument. The path to the file or directory must be the last argument.");
+            error!("Path doesn`t exist or you don`t have access");
             process::exit(1);
         }
     } else {
-        println!("{}", "Nevermind then".dimmed());
-        process::exit(0);
+        error!(
+            "Missing path argument. The path to the file or directory must be the last argument."
+        );
+        process::exit(1);
+    }
+
+    Ok(())
+}
+
+fn rename_path(replace_char: &str, new_char: &str, path: &Path) -> io::Result<()> {
+    match path.to_str() {
+        Some(name) => {
+            let new_name = name.replace(replace_char, new_char);
+            println!("{}", new_name);
+            // fs::rename(path, new_path)?;
+        }
+        None => {
+            error!("Non UTF-8 string found. Path must be valid unicode");
+            process::exit(1);
+        }
     }
 
     Ok(())
@@ -141,7 +236,7 @@ fn replace_chars(mut args: Vec<&str>) -> io::Result<()> {
 
 fn confirm(msg: &str) -> bool {
     loop {
-        println!("{}", msg.yellow().bold());
+        println!("{}", msg);
 
         let mut input = String::new();
         io::stdin()
