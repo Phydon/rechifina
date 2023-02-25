@@ -1,4 +1,4 @@
-use clap::{Arg, ArgAction, Command};
+use clap::{arg, Arg, ArgAction, Command};
 use colored::*;
 use flexi_logger::{detailed_format, Duplicate, FileSpec, Logger};
 use log::{error, info, warn};
@@ -79,13 +79,28 @@ fn main() {
 
 fn rechifina() -> Command {
     Command::new("rechifina")
+        // FIXME aliases not visible -> why not?
         .visible_aliases(["rech", "refina"])
         .bin_name("rechifina")
         .about("Replace a given char from a filename with another given char")
         .version("1.0.0")
         .author("Leann Phydon <leann.phydon@gmail.com")
         .arg_required_else_help(true)
-        .arg(Arg::new("").action(ArgAction::Set).num_args(3).short('r'))
+        .arg(
+            Arg::new("")
+                .short('r')
+                .long("replace")
+                .next_line_help(true)
+                .long_help(format!(
+                    "{},\n{},\n{}",
+                    "First argument must be the char to replace",
+                    "second argument must be the new char",
+                    "last argmument must be the path to the file or directory"
+                ))
+                .action(ArgAction::Set)
+                .num_args(3)
+                .value_names(["CHAR_TO_REPLACE", "NEW_CHAR", "PATH"]),
+        )
         .subcommand(
             Command::new("log")
                 .short_flag('l')
