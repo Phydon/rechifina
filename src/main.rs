@@ -48,22 +48,11 @@ fn main() {
         let arg_collection = args.map(|s| s.as_str()).collect::<Vec<&str>>();
 
         if let Err(err) = replace_chars(arg_collection) {
-            error!("Error executing cmds: {}", err);
+            error!("Error while trying to change the filenames: {}", err);
             process::exit(1);
         }
     } else {
         match matches.subcommand() {
-            Some(("replace", sub_matches)) => {
-                let args: Vec<&str> = sub_matches
-                    .get_many::<String>("")
-                    .unwrap()
-                    .map(|s| s.as_str())
-                    .collect();
-                if let Err(err) = replace_chars(args) {
-                    error!("Error executing cmds: {}", err);
-                    process::exit(1);
-                }
-            }
             Some(("log", _)) => {
                 if let Ok(logs) = show_log_file(&config_dir) {
                     println!("{}", "Available logs:".bold().yellow());
@@ -83,10 +72,10 @@ fn rechifina() -> Command {
         .bin_name("rechifina")
         .about("Replace a given char from a filename with another given char")
         .long_about(format!(
-            "{}\n{}\n{}\n{}",
+            "{}\n\n{}\n{}\n{}",
             "Replace a given char from a filename with another given char.",
             "If the path to a directory is given as the last argument,",
-            "it will go through every entry of the directory and prompt the user to confirm first.",
+            "it will go through every entry of the directory.",
             "It doesn`t go recursively through the directory."
         ))
         .version("1.0.0")
