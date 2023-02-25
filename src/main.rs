@@ -1,4 +1,4 @@
-use clap::Command;
+use clap::{Arg, ArgAction, Command};
 use colored::*;
 use flexi_logger::{detailed_format, Duplicate, FileSpec, Logger};
 use log::{error, info, warn};
@@ -44,8 +44,13 @@ fn main() {
     // handle arguments
     let matches = rechifina().get_matches();
     match matches.subcommand() {
-        Some(("run", _)) => {
-            if let Err(err) = replace_chars() {
+        Some(("replace", sub_matches)) => {
+            let args: Vec<&str> = sub_matches
+                .get_many::<String>("")
+                .unwrap()
+                .map(|s| s.as_str())
+                .collect();
+            if let Err(err) = replace_chars(args) {
                 error!("Error executing cmds: {}", err);
                 process::exit(1);
             }
@@ -65,24 +70,47 @@ fn main() {
 
 fn rechifina() -> Command {
     Command::new("rechifina")
-        .about("Replace char in filename")
+        .visible_aliases(["rech", "refina"])
+        .about("Replace a given char from a filename with another given char")
         .version("1.0.0")
         .author("Leann Phydon <leann.phydon@gmail.com")
+        // TODO subcommand/arg needed??
         .subcommand_required(true)
         .arg_required_else_help(true)
+        // FIXME
+        .subcommand(
+            Command::new("replace")
+                .short_flag('r')
+                .about("Replace chars")
+                .arg(
+                    Arg::new("replace")
+                        .action(ArgAction::Set)
+                        .num_args(3)
+                        .short('r'),
+                ),
+        )
         .subcommand(
             Command::new("log")
                 .short_flag('l')
                 .about("Show content of the log file"),
         )
-        .subcommand(Command::new("run").short_flag('r').about("Run"))
 }
 
-fn replace_chars() -> io::Result<()> {
+fn replace_chars(mut args: Vec<&str>) -> io::Result<()> {
     info!("Started");
     let msg = "Do you really want to replace the chars in the given filenames? (y/n)";
     if confirm(msg) {
         warn!("About to replace chars in filenames");
+        if let Some(p) = args.pop() {
+            let path = Path::new(p).to_path_buf();
+            // TODO check if path is file or dir
+            // if dir go through all files in that dir
+            // if file check for given char in arg and
+            // try to replace it with the second given arg
+        } else {
+            error!("Missing path argument. The path to the file or directory must be the last argument.");
+            process::exit(1);
+        }
     } else {
         println!("{}", "Nevermind then".dimmed());
     }
