@@ -1,6 +1,6 @@
 # rechifina
 
-**replace char in filename**
+**REplace CHars In FIleNAmes**
 
 
 * replace a given char from a filename with another given char.
@@ -37,26 +37,40 @@ Options:
 ```rechifina --replace " " "_" "test file.txt"```
 
 >changes the filename "test file.txt" to "test_file.txt"
+
 > asks the user to confirm before the file gets renamed
+
 > shows the possible new filename before changing the filename
+
 
 ```rechifina -r " " "_" .```
 
 > goes through every file in the current directory
+
 > replace every instance of a space (" ") in a filename with an underscore ("_")
+
 > skips all files if there`s no space in the filename
+
 > skips hidden files, directories, symlinks
+
 > asks the user to confirm the renaming for every single file
+
 > shows the possible new filename before changing the filename
+
 
 
 ```rechifina --replace " " "_" . --all```
 
 > goes through every file in the current directory
+
 > replace every instance of a space (" ") in a filename with an underscore ("_")
+
 > skips all files if there`s no space in the filename
+
 > skips hidden files, directories, symlinks
+
 > asks the user to confirm once before renaming all files in the directory
+
 
 ## Installation
 
