@@ -44,10 +44,11 @@ fn main() {
 
     // handle arguments
     let matches = rechifina().get_matches();
+    let arg_flag = matches.get_flag("all");
     if let Some(args) = matches.get_many::<String>("") {
         let arg_collection = args.map(|s| s.as_str()).collect::<Vec<&str>>();
 
-        if let Err(err) = replace_chars(arg_collection) {
+        if let Err(err) = replace_chars(arg_collection, arg_flag) {
             error!("Error while trying to change the filenames: {}", err);
             process::exit(1);
         }
@@ -98,6 +99,13 @@ fn rechifina() -> Command {
                 .num_args(3)
                 .value_names(["CHAR_TO_REPLACE", "NEW_CHAR", "PATH"]),
         )
+        .arg(
+            Arg::new("all")
+                .short('a')
+                .long("all")
+                .help("Rename all files without confirmation")
+                .action(ArgAction::SetTrue),
+        )
         .subcommand(
             Command::new("log")
                 .short_flag('l')
@@ -105,7 +113,7 @@ fn rechifina() -> Command {
         )
 }
 
-fn replace_chars(mut args: Vec<&str>) -> io::Result<()> {
+fn replace_chars(mut args: Vec<&str>, arg_flag: bool) -> io::Result<()> {
     if let Some(p) = args.pop() {
         let path = Path::new(p);
         let replace_char = args[0];
@@ -115,12 +123,15 @@ fn replace_chars(mut args: Vec<&str>) -> io::Result<()> {
             if path.is_file() {
                 let new_name = get_new_name(replace_char, new_char, path);
                 let new_path = Path::new(&new_name);
-                if let Err(err) = rename_file(path, &new_name, new_path) {
-                    error!("Unable to rename {}. Error: {}", path.display(), err);
+                if let Err(err) = rename_file(path, &new_name, new_path, arg_flag) {
+                    error!(
+                        "Unable to rename {}. Error: {}",
+                        path.display().to_string().italic(),
+                        err
+                    );
                     process::exit(1);
                 }
             } else if path.is_dir() {
-                // TODO add option to rename all at once
                 let msg = format!(
                     "{} {} {} {} {} {}",
                     "[❓]".dimmed(),
@@ -148,9 +159,13 @@ fn replace_chars(mut args: Vec<&str>) -> io::Result<()> {
                             let new_name = get_new_name(replace_char, new_char, &entry.path());
                             let new_path = Path::new(&new_name);
                             if let Err(err) =
-                                rename_file(entry.path().as_path(), &new_name, new_path)
+                                rename_file(entry.path().as_path(), &new_name, new_path, arg_flag)
                             {
-                                error!("Unable to rename {}. Error: {}", path.display(), err);
+                                error!(
+                                    "Unable to rename {}. Error: {}",
+                                    path.display().to_string().italic(),
+                                    err
+                                );
                                 process::exit(1);
                             }
                         }
@@ -233,23 +248,8 @@ fn get_new_name(replace_char: &str, new_char: &str, path: &Path) -> String {
     new_name
 }
 
-fn rename_file(path: &Path, new_name: &str, new_path: &Path) -> io::Result<()> {
-    let msg = format!(
-        "{} {} {} {} {} {}\n{} {} {} {} {}",
-        "[❓]".dimmed(),
-        "Do you really want to replace the chars in".red().bold(),
-        "[".yellow(),
-        path.display().to_string().italic(),
-        "]".yellow(),
-        "? (y/n)".red().bold(),
-        " ↪  ".dimmed(),
-        "The new path would look like this:".red().bold(),
-        "[".yellow(),
-        new_name.italic().green(),
-        "]".yellow(),
-    );
-
-    if confirm(&msg) {
+fn rename_file(path: &Path, new_name: &str, new_path: &Path, all_flag: bool) -> io::Result<()> {
+    if all_flag {
         fs::rename(path, new_path)?;
         println!(
             "{} {} {} {} {} {} {} {} {}",
@@ -262,9 +262,40 @@ fn rename_file(path: &Path, new_name: &str, new_path: &Path) -> io::Result<()> {
             "[".yellow(),
             new_name.italic(),
             "]".yellow()
-        );
+        )
     } else {
-        println!("{} {}", "[❌]".dimmed(), "Nevermind then".bold().dimmed());
+        let msg = format!(
+            "{} {} {} {} {} {}\n{} {} {} {} {}",
+            "[❓]".dimmed(),
+            "Do you really want to replace the chars in".red().bold(),
+            "[".yellow(),
+            path.display().to_string().italic(),
+            "]".yellow(),
+            "? (y/n)".red().bold(),
+            " ↪  ".dimmed(),
+            "The new path would look like this:".red().bold(),
+            "[".yellow(),
+            new_name.italic().green(),
+            "]".yellow(),
+        );
+
+        if confirm(&msg) {
+            fs::rename(path, new_path)?;
+            println!(
+                "{} {} {} {} {} {} {} {} {}",
+                "[✔]".dimmed(),
+                "Successfully renamed".green().bold(),
+                "[".yellow(),
+                path.display().to_string().italic(),
+                "]".yellow(),
+                "to".green().bold(),
+                "[".yellow(),
+                new_name.italic(),
+                "]".yellow()
+            );
+        } else {
+            println!("{} {}", "[❌]".dimmed(), "Nevermind then".bold().dimmed());
+        }
     }
 
     Ok(())
