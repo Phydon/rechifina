@@ -285,7 +285,11 @@ fn rename_file(path: &Path, new_path: &Path, all_flag: bool) -> io::Result<()> {
             " ↪  ".dimmed(),
             "Old name:".dimmed(),
             "[".yellow(),
-            path.file_name().unwrap().to_string_lossy().italic(),
+            path.file_name()
+                .unwrap()
+                .to_string_lossy()
+                .italic()
+                .dimmed(),
             "]".yellow(),
             " ↪  ".dimmed(),
             "New name:".bright_green(),
@@ -325,7 +329,11 @@ fn rename_file(path: &Path, new_path: &Path, all_flag: bool) -> io::Result<()> {
                 " ↪  ".dimmed(),
                 "Old name:".dimmed(),
                 "[".yellow(),
-                path.file_name().unwrap().to_string_lossy().italic(),
+                path.file_name()
+                    .unwrap()
+                    .to_string_lossy()
+                    .italic()
+                    .dimmed(),
                 "]".yellow(),
                 " ↪  ".dimmed(),
                 "New name:".bright_green(),
