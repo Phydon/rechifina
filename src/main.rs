@@ -141,7 +141,7 @@ fn replace_chars(mut args: Vec<&str>, arg_flag: bool) -> io::Result<()> {
                             "💥",
                         );
                         return Ok(());
-                    } else if let Err(err) = rename_file(path, &new_name, new_path, arg_flag) {
+                    } else if let Err(err) = rename_file(path, new_path, arg_flag) {
                         error!(
                             "Unable to rename {}. Error: {}",
                             path.display().to_string().italic(),
@@ -182,12 +182,9 @@ fn replace_chars(mut args: Vec<&str>, arg_flag: bool) -> io::Result<()> {
                                 let new_path = Path::new(&new_name);
                                 if entry.path() == new_path {
                                     continue;
-                                } else if let Err(err) = rename_file(
-                                    entry.path().as_path(),
-                                    &new_name,
-                                    new_path,
-                                    arg_flag,
-                                ) {
+                                } else if let Err(err) =
+                                    rename_file(entry.path().as_path(), new_path, arg_flag)
+                                {
                                     error!(
                                         "Unable to rename {}. Error: {}",
                                         path.display().to_string().italic(),
@@ -278,49 +275,62 @@ fn get_new_name(replace_char: &str, new_char: &str, path: &Path) -> String {
     new_name
 }
 
-fn rename_file(path: &Path, new_name: &str, new_path: &Path, all_flag: bool) -> io::Result<()> {
+fn rename_file(path: &Path, new_path: &Path, all_flag: bool) -> io::Result<()> {
     if all_flag {
         fs::rename(path, new_path)?;
         println!(
-            "{} {} {} {} {} {} {} {} {}",
-            "[✔]".dimmed(),
+            "{} {}\n{} {} {} {} {}\n{} {} {} {} {}",
+            "[✔] ".dimmed(),
             "Successfully renamed".green().bold(),
+            " ↪  ".dimmed(),
+            "Old name:".dimmed(),
             "[".yellow(),
-            path.display().to_string().italic(),
+            path.file_name().unwrap().to_string_lossy().italic(),
             "]".yellow(),
-            "to".green().bold(),
+            " ↪  ".dimmed(),
+            "New name:".bright_green(),
             "[".yellow(),
-            new_name.italic(),
+            new_path.file_name().unwrap().to_string_lossy().italic(),
             "]".yellow()
-        )
+        );
     } else {
         let msg = format!(
-            "{} {} {} {} {} {}\n{} {} {} {} {}",
+            "{} {}\n{} {} {} {} {}\n{} {} {} {} {}",
             "[❓]".dimmed(),
-            "Do you really want to replace the chars in".red().bold(),
-            "[".yellow(),
-            path.display().to_string().italic(),
-            "]".yellow(),
-            "? (y/n)".red().bold(),
+            "Do you really want to replace the chars in the file? (y/n)"
+                .red()
+                .bold(),
             " ↪  ".dimmed(),
-            "The new path would look like this:".red().bold(),
+            "Old name:".dimmed(),
             "[".yellow(),
-            new_name.italic().green(),
+            path.file_name()
+                .unwrap()
+                .to_string_lossy()
+                .italic()
+                .dimmed(),
+            "]".yellow(),
+            " ↪  ".dimmed(),
+            "New name:".bright_green(),
+            "[".yellow(),
+            new_path.file_name().unwrap().to_string_lossy().italic(),
             "]".yellow(),
         );
 
         if confirm(&msg) {
             fs::rename(path, new_path)?;
             println!(
-                "{} {} {} {} {} {} {} {} {}",
-                "[✔]".dimmed(),
+                "{} {}\n{} {} {} {} {}\n{} {} {} {} {}",
+                "[✔] ".dimmed(),
                 "Successfully renamed".green().bold(),
+                " ↪  ".dimmed(),
+                "Old name:".dimmed(),
                 "[".yellow(),
-                path.display().to_string().italic(),
+                path.file_name().unwrap().to_string_lossy().italic(),
                 "]".yellow(),
-                "to".green().bold(),
+                " ↪  ".dimmed(),
+                "New name:".bright_green(),
                 "[".yellow(),
-                new_name.italic(),
+                new_path.file_name().unwrap().to_string_lossy().italic(),
                 "]".yellow()
             );
         } else {
