@@ -5,7 +5,7 @@ use flexi_logger::{detailed_format, Duplicate, FileSpec, Logger};
 use log::{error, warn};
 
 use std::{
-    fs, io,
+    env, fs, io,
     path::{Path, PathBuf},
     process,
 };
@@ -115,21 +115,31 @@ fn rechifina() -> Command {
 
 fn replace_chars(mut args: Vec<&str>, arg_flag: bool) -> io::Result<()> {
     if let Some(p) = args.pop() {
-        let path = Path::new(p);
+        let mut path = Path::new(p);
         let replace_char = args[0];
         let new_char = args[1];
+        let current_dir = env::current_dir()?;
+
+        if path == Path::new(".") {
+            path = current_dir.as_path();
+        }
 
         if path.exists() {
             if path.is_file() {
                 let new_name = get_new_name(replace_char, new_char, path);
-                let new_path = Path::new(&new_name);
-                if let Err(err) = rename_file(path, &new_name, new_path, arg_flag) {
-                    error!(
-                        "Unable to rename {}. Error: {}",
-                        path.display().to_string().italic(),
-                        err
-                    );
-                    process::exit(1);
+                // TODO
+                if new_name.is_empty() {
+                    return Err(io::Error::from(io::ErrorKind::InvalidData));
+                } else {
+                    let new_path = Path::new(&new_name);
+                    if let Err(err) = rename_file(path, &new_name, new_path, arg_flag) {
+                        error!(
+                            "Unable to rename {}. Error: {}",
+                            path.display().to_string().italic(),
+                            err
+                        );
+                        process::exit(1);
+                    }
                 }
             } else if path.is_dir() {
                 let msg = format!(
@@ -157,16 +167,24 @@ fn replace_chars(mut args: Vec<&str>, arg_flag: bool) -> io::Result<()> {
 
                         if entry.path().is_file() {
                             let new_name = get_new_name(replace_char, new_char, &entry.path());
-                            let new_path = Path::new(&new_name);
-                            if let Err(err) =
-                                rename_file(entry.path().as_path(), &new_name, new_path, arg_flag)
-                            {
-                                error!(
-                                    "Unable to rename {}. Error: {}",
-                                    path.display().to_string().italic(),
-                                    err
-                                );
-                                process::exit(1);
+                            // TODO
+                            if new_name.is_empty() {
+                                continue;
+                            } else {
+                                let new_path = Path::new(&new_name);
+                                if let Err(err) = rename_file(
+                                    entry.path().as_path(),
+                                    &new_name,
+                                    new_path,
+                                    arg_flag,
+                                ) {
+                                    error!(
+                                        "Unable to rename {}. Error: {}",
+                                        path.display().to_string().italic(),
+                                        err
+                                    );
+                                    process::exit(1);
+                                }
                             }
                         }
                     }
@@ -197,24 +215,25 @@ fn get_new_name(replace_char: &str, new_char: &str, path: &Path) -> String {
 
     let extension = path
         .extension()
-        .unwrap_or_else(|| {
-            error!("Not a valid file. Missing extension");
-            process::exit(1);
-        })
+        .unwrap_or_else(|| std::ffi::OsStr::new(""))
         .to_str()
         .unwrap_or_else(|| {
-            error!("Not a valid file. Missing extension");
+            error!(
+                "Extension from file: {} not convertable to str",
+                path.display().to_string().italic()
+            );
             process::exit(1);
         });
 
-    // FIXME add parent path to new path/new_name
-    // otherwise it will move the files to the current dir
     let parent = path
         .parent()
         .unwrap_or_else(|| Path::new(""))
         .to_str()
         .unwrap_or_else(|| {
-            error!("Not a valid file. Missing extension");
+            error!(
+                "Parent path from file: {} not convertable to str",
+                path.display().to_string().italic()
+            );
             process::exit(1);
         });
 
@@ -222,14 +241,15 @@ fn get_new_name(replace_char: &str, new_char: &str, path: &Path) -> String {
         Some(filestem_as_osstr) => match filestem_as_osstr.to_str() {
             Some(filestem_as_str) => {
                 let rpl_name = filestem_as_str.replace(replace_char, new_char);
-                if parent.is_empty() {
-                    new_name.push_str(&rpl_name);
-                    new_name.push_str(".");
-                    new_name.push_str(extension);
-                } else {
+
+                if !parent.is_empty() {
                     new_name.push_str(parent);
                     new_name.push_str("\\");
-                    new_name.push_str(&rpl_name);
+                }
+
+                new_name.push_str(&rpl_name);
+
+                if !extension.is_empty() {
                     new_name.push_str(".");
                     new_name.push_str(extension);
                 }
