@@ -14,9 +14,10 @@ fn main() {
     // handle Ctrl+C
     ctrlc::set_handler(move || {
         println!(
-            "{} {}",
+            "{} {} {}",
             "🤬",
-            "Received Ctrl-C! => Exit program!".bold().yellow()
+            "Received Ctrl-C! => Exit program!".bold().yellow(),
+            "☠",
         );
         process::exit(0)
     })
@@ -127,12 +128,20 @@ fn replace_chars(mut args: Vec<&str>, arg_flag: bool) -> io::Result<()> {
         if path.exists() {
             if path.is_file() {
                 let new_name = get_new_name(replace_char, new_char, path);
-                // TODO
+
                 if new_name.is_empty() {
                     return Err(io::Error::from(io::ErrorKind::InvalidData));
                 } else {
                     let new_path = Path::new(&new_name);
-                    if let Err(err) = rename_file(path, &new_name, new_path, arg_flag) {
+                    if path == new_path {
+                        println!(
+                            "{} {} {}",
+                            "[🤨]".dimmed(),
+                            "The filename wouldn`t change".purple().bold(),
+                            "💥",
+                        );
+                        return Ok(());
+                    } else if let Err(err) = rename_file(path, &new_name, new_path, arg_flag) {
                         error!(
                             "Unable to rename {}. Error: {}",
                             path.display().to_string().italic(),
@@ -167,12 +176,13 @@ fn replace_chars(mut args: Vec<&str>, arg_flag: bool) -> io::Result<()> {
 
                         if entry.path().is_file() {
                             let new_name = get_new_name(replace_char, new_char, &entry.path());
-                            // TODO
                             if new_name.is_empty() {
                                 continue;
                             } else {
                                 let new_path = Path::new(&new_name);
-                                if let Err(err) = rename_file(
+                                if entry.path() == new_path {
+                                    continue;
+                                } else if let Err(err) = rename_file(
                                     entry.path().as_path(),
                                     &new_name,
                                     new_path,
