@@ -1,4 +1,6 @@
 // TODO create costum errors
+// TODO add arg: show output as table
+// TODO add arg: show no output
 use clap::{Arg, ArgAction, Command};
 use colored::*;
 use flexi_logger::{detailed_format, Duplicate, FileSpec, Logger};
@@ -72,29 +74,57 @@ fn main() {
 fn rechifina() -> Command {
     Command::new("rechifina")
         .bin_name("rechifina")
-        .about("Replace a given char from a filename with another given char")
+        .before_help(format!(
+            "{}\n{}",
+            "RECHIFINA".bold().truecolor(250, 0, 104),
+            "Leann Phydon <leann.phydon@gmail.com>".italic().dimmed()
+        ))
+        .about(format!(
+            "{}{}{}{}{}{}{}{}{}{}",
+            "RE".truecolor(250, 0, 104),
+            "place a given ",
+            "CH".truecolor(250, 0, 104),
+            "ar ",
+            "I".truecolor(250, 0, 104),
+            "n a ",
+            "FI".truecolor(250, 0, 104),
+            "le",
+            "NA".truecolor(250, 0, 104),
+            "me with another given char"
+        ))
         .long_about(format!(
-            "{}\n\n{}\n{}\n{}",
-            "Replace a given char from a filename with another given char.",
+            "{}{}{}{}{}{}{}{}{}{}\n\n{}\n{}\n{}\n{}\n{}",
+            "RE".truecolor(250, 0, 104),
+            "place a given ",
+            "CH".truecolor(250, 0, 104),
+            "ar ",
+            "I".truecolor(250, 0, 104),
+            "n a ",
+            "FI".truecolor(250, 0, 104),
+            "le",
+            "NA".truecolor(250, 0, 104),
+            "me with another given char",
             "If the path to a directory is given as the last argument,",
-            "it will go through every entry of the directory.",
-            "It doesn`t go recursively through the directory."
+            "it will go through every entry of the directory",
+            "It doesn`t go recursively through the directory",
+            "Skips a file if the filename doesn`t contain the given char to replace",
+            "By default the user has to confirm the file operation for every file",
         ))
         .version("1.0.0")
-        .author("Leann Phydon <leann.phydon@gmail.com")
-        // FIXME aliases not visible -> why not?
-        .visible_alias("rech")
+        .author("Leann Phydon <leann.phydon@gmail.com>")
         .arg_required_else_help(true)
         .arg(
             Arg::new("")
                 .short('r')
                 .long("replace")
+                .help("Replace a given char with a new one in a given file or directory")
                 .next_line_help(true)
                 .long_help(format!(
-                    "{},\n{},\n{}",
+                    "{}\n{}\n{}\n{}",
                     "First argument must be the char to replace",
-                    "second argument must be the new char",
-                    "last argmument must be the path to the file or directory"
+                    "Second argument must be the new char",
+                    "Last argmument must be the path to the file or directory",
+                    "Use \".\" to take the current directory as the <PATH> argument"
                 ))
                 .action(ArgAction::Set)
                 .num_args(3)
