@@ -5,6 +5,7 @@
 
 * replace a given char from a filename with another given char.
 * if the path to a directory is given as the last argument, it will go through every entry of the directory.
+* it doesn`t go recursively through the directory
 * skips a file if the filename doesn`t contain the given char to replace
 * by default the user has to confirm the file operation for every file
 * use the ```-a; --all``` flag to only confirm once for all files in a directory
