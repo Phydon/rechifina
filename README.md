@@ -61,4 +61,6 @@ Options:
 
 ## Installation
 
-* build via cargo
+### Windows
+
+via Cargo or get the ![binary](https://github.com/Phydon/rechifina/releases)
