@@ -37,7 +37,7 @@ Options:
 
 ```rechifina --replace " " "_" "test file.txt"```
 
-*changes the filename "test file.txt" to "test_file.txt"
+* changes the filename "test file.txt" to "test_file.txt"
 * asks the user to confirm before the file gets renamed
 * shows the possible new filename before changing the filename
 
