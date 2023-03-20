@@ -13,18 +13,18 @@
 
 ## Usage 
 
+# Short Usage
+
 ```
 rechifina [OPTIONS] [COMMANDS]
 
 Commands:
-  log, -l  Show content of the log file
-  help     Print this message or the help of the given subcommand(s)
+  log, -L, --log  Show content of the log file
+  help            Print this message or the help of the given subcommand(s)
 
 Options:
   -r, --replace <CHAR_TO_REPLACE> <NEW_CHAR> <PATH>
-          First argument must be the char to replace,
-          second argument must be the new char,
-          last argmument must be the path to the file or directory
+          Replace a given char with a new one in a given file or directory
   -a, --all
           Rename all files without confirmation
   -h, --help
@@ -32,14 +32,47 @@ Options:
   -V, --version
           Print version
 ```
+# Long Usage
+
+```
+rechifina [OPTIONS] [COMMAND]
+
+Commands:
+  log, -L, --log
+          Show content of the log file
+  help
+          Print this message or the help of the given subcommand(s)
+
+Options:
+  -r, --replace <CHAR_TO_REPLACE> <NEW_CHAR> <PATH>
+          First argument must be the char to replace
+          Second argument must be the new char
+          Last argmument must be the path to the file or directory
+          Use "." to take the current directory as the <PATH> argument
+
+  -a, --all
+          Rename all files without confirmation
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version
+```
 
 ## Examples
 
-```rechifina --replace " " "_" "test file.txt"```
+```rechifina --replace " " "_" "this is the testfile.txt"```
 
-* changes the filename "test file.txt" to "test_file.txt"
+* changes the filename "this is the testfile.txt" to "this_is_the_testfile.txt"
 * asks the user to confirm before the file gets renamed
 * shows the possible new filename before changing the filename
+
+
+![screenshot](https://github.com/Phydon/rechifina/blob/master/assets/rech_prompt.png)
+
+![screenshot](https://github.com/Phydon/rechifina/blob/master/assets/rech_success.png)
+
 
 ```rechifina -r " " "_" .```
 
