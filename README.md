@@ -13,7 +13,7 @@
 
 ## Usage 
 
-# Short Usage
+### Short Usage
 
 ```
 rechifina [OPTIONS] [COMMANDS]
@@ -32,7 +32,7 @@ Options:
   -V, --version
           Print version
 ```
-# Long Usage
+### Long Usage
 
 ```
 rechifina [OPTIONS] [COMMAND]
@@ -64,7 +64,7 @@ Options:
 
 ```rechifina --replace " " "_" "this is the testfile.txt"```
 
-* changes the filename "this is the testfile.txt" to "this_is_the_testfile.txt"
+* changes the filename _"this is the testfile.txt"_ to _"this_is_the_testfile.txt"_
 * asks the user to confirm before the file gets renamed
 * shows the possible new filename before changing the filename
 
