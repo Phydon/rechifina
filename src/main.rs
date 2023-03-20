@@ -16,9 +16,10 @@ fn main() {
     // handle Ctrl+C
     ctrlc::set_handler(move || {
         println!(
-            "{} {} {}",
+            "{} {} {} {}",
+            "Received Ctrl-C!".bold().red(),
             "🤬",
-            "Received Ctrl-C! => Exit program!".bold().yellow(),
+            "Exit program!".bold().red(),
             "☠",
         );
         process::exit(0)
@@ -110,7 +111,8 @@ fn rechifina() -> Command {
             "Skips a file if the filename doesn`t contain the given char to replace",
             "By default the user has to confirm the file operation for every file",
         ))
-        .version("1.0.0")
+        // TODO update version
+        .version("1.0.1")
         .author("Leann Phydon <leann.phydon@gmail.com>")
         .arg_required_else_help(true)
         .arg(
@@ -139,7 +141,8 @@ fn rechifina() -> Command {
         )
         .subcommand(
             Command::new("log")
-                .short_flag('l')
+                .short_flag('L')
+                .long_flag("log")
                 .about("Show content of the log file"),
         )
 }
