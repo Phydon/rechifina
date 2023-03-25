@@ -48,11 +48,14 @@ fn main() {
 
     // handle arguments
     let matches = rechifina().get_matches();
-    let arg_flag = matches.get_flag("all");
-    if let Some(args) = matches.get_many::<String>("") {
-        let arg_collection = args.map(|s| s.as_str()).collect::<Vec<&str>>();
+    let all_flag = matches.get_flag("all");
+    let uppercase_flag = matches.get_flag("uppercase");
+    let lowercase_flag = matches.get_flag("lowercase");
 
-        if let Err(err) = replace_chars(arg_collection, arg_flag) {
+    if let Some(matches) = matches.get_many::<String>("args") {
+        let args = matches.map(|s| s.as_str()).collect::<Vec<&str>>();
+
+        if let Err(err) = replace_chars(args, all_flag, uppercase_flag, lowercase_flag) {
             error!("Error while trying to change the filenames: {}", err);
             process::exit(1);
         }
@@ -112,31 +115,43 @@ fn rechifina() -> Command {
             "By default the user has to confirm the file operation for every file",
         ))
         // TODO update version
-        .version("1.0.1")
+        .version("1.1.0")
         .author("Leann Phydon <leann.phydon@gmail.com>")
         .arg_required_else_help(true)
         .arg(
-            Arg::new("")
-                .short('r')
-                .long("replace")
+            Arg::new("args")
                 .help("Replace a given char with a new one in a given file or directory")
                 .next_line_help(true)
                 .long_help(format!(
                     "{}\n{}\n{}\n{}",
-                    "First argument must be the char to replace",
-                    "Second argument must be the new char",
-                    "Last argmument must be the path to the file or directory",
-                    "Use \".\" to take the current directory as the <PATH> argument"
+                    "First argmument must be the path to the file or directory",
+                    "Use \".\" to take the current directory as the <PATH> argument",
+                    "Second argument must be the char to replace",
+                    "Last argument must be the new char",
                 ))
                 .action(ArgAction::Set)
-                .num_args(3)
-                .value_names(["CHAR_TO_REPLACE", "NEW_CHAR", "PATH"]),
+                .num_args(1..=3)
+                .value_names(["PATH", "CHAR_TO_REPLACE", "NEW_CHAR"]),
         )
         .arg(
             Arg::new("all")
                 .short('a')
                 .long("all")
                 .help("Rename all files without confirmation")
+                .action(ArgAction::SetTrue),
+        )
+        .arg(
+            Arg::new("lowercase")
+                .short('l')
+                .long("lowercase")
+                .help("Make the filename all lowercase")
+                .action(ArgAction::SetTrue),
+        )
+        .arg(
+            Arg::new("uppercase")
+                .short('u')
+                .long("uppercase")
+                .help("Make the filename all uppercase")
                 .action(ArgAction::SetTrue),
         )
         .subcommand(
@@ -147,11 +162,15 @@ fn rechifina() -> Command {
         )
 }
 
-fn replace_chars(mut args: Vec<&str>, arg_flag: bool) -> io::Result<()> {
-    if let Some(p) = args.pop() {
-        let mut path = Path::new(p);
-        let replace_char = args[0];
-        let new_char = args[1];
+fn replace_chars(
+    args: Vec<&str>,
+    all_flag: bool,
+    uppercase_flag: bool,
+    lowercase_flag: bool,
+) -> io::Result<()> {
+    if !args.is_empty() {
+        let mut path = Path::new(args[0]);
+
         let current_dir = env::current_dir()?;
 
         if path == Path::new(".") {
@@ -159,12 +178,9 @@ fn replace_chars(mut args: Vec<&str>, arg_flag: bool) -> io::Result<()> {
         }
 
         if path.exists() {
-            if path.is_file() {
-                let new_name = get_new_name(replace_char, new_char, path);
-
-                if new_name.is_empty() {
-                    return Err(io::Error::from(io::ErrorKind::InvalidData));
-                } else {
+            if uppercase_flag || lowercase_flag {
+                if path.is_file() {
+                    let new_name = show_lower_or_upper_name(path, uppercase_flag, lowercase_flag);
                     let new_path = Path::new(&new_name);
                     if path == new_path {
                         println!(
@@ -175,7 +191,9 @@ fn replace_chars(mut args: Vec<&str>, arg_flag: bool) -> io::Result<()> {
                         );
                         return Ok(());
                     } else if let Err(err) =
-                        rename_file(path, new_path, arg_flag, replace_char, new_char)
+                        // rename_file(path, new_path, all_flag, replace_char, new_char)
+                        // TODO
+                        make_lower_or_upper(path, new_path, all_flag)
                     {
                         error!(
                             "Unable to rename {}. Error: {}",
@@ -184,52 +202,57 @@ fn replace_chars(mut args: Vec<&str>, arg_flag: bool) -> io::Result<()> {
                         );
                         process::exit(1);
                     }
-                }
-            } else if path.is_dir() {
-                let msg = format!(
-                    "{} {} {}{}{} {} {}{}{} {} {}{}{} {}",
-                    "[❓]".dimmed(),
-                    "Do you really want to replace all".red().bold(),
-                    "[ \'".yellow(),
-                    replace_char,
-                    "\' ]".yellow(),
-                    "with".red().bold(),
-                    "[ \'".yellow(),
-                    new_char,
-                    "\' ]".yellow(),
-                    "in all files in".red().bold(),
-                    "[ \'".yellow(),
-                    path.display().to_string().italic(),
-                    "\' ]".yellow(),
-                    "? (y/n)".red().bold(),
-                );
+                } else if path.is_dir() {
+                    let msg = if uppercase_flag {
+                        format!(
+                            "{} {} {}{}{} {}",
+                            "[❓]".dimmed(),
+                            "Do you really want to change all files in".red().bold(),
+                            "[ \'".yellow(),
+                            path.display().to_string().italic(),
+                            "\' ]".yellow(),
+                            "to uppercase? (y/n)".red().bold(),
+                        )
+                    } else {
+                        format!(
+                            "{} {} {}{}{} {}",
+                            "[❓]".dimmed(),
+                            "Do you really want to change all files in".red().bold(),
+                            "[ \'".yellow(),
+                            path.display().to_string().italic(),
+                            "\' ]".yellow(),
+                            "to lowercase? (y/n)".red().bold(),
+                        )
+                    };
 
-                if confirm(&msg) {
-                    if fs::read_dir(path)?.count() == 0 {
-                        warn!(
-                            "The given Directory {} is empty",
-                            path.display().to_string().italic()
-                        );
-                    }
+                    if confirm(&msg) {
+                        if fs::read_dir(path)?.count() == 0 {
+                            warn!(
+                                "The given Directory {} is empty",
+                                path.display().to_string().italic()
+                            );
+                        }
 
-                    for entry in fs::read_dir(path)? {
-                        let entry = entry?;
+                        for entry in fs::read_dir(path)? {
+                            let entry = entry?;
 
-                        if entry.path().is_file() {
-                            let new_name = get_new_name(replace_char, new_char, &entry.path());
-                            if new_name.is_empty() {
-                                continue;
-                            } else {
+                            if entry.path().is_file() {
+                                let new_name =
+                                    show_lower_or_upper_name(path, uppercase_flag, lowercase_flag);
                                 let new_path = Path::new(&new_name);
-                                if entry.path() == new_path {
-                                    continue;
-                                } else if let Err(err) = rename_file(
-                                    entry.path().as_path(),
-                                    new_path,
-                                    arg_flag,
-                                    replace_char,
-                                    new_char,
-                                ) {
+                                if path == new_path {
+                                    println!(
+                                        "{} {} {}",
+                                        "[🤨]".dimmed(),
+                                        "The filename wouldn`t change".purple().bold(),
+                                        "💥",
+                                    );
+                                    return Ok(());
+                                } else if let Err(err) =
+                                    // rename_file(path, new_path, all_flag, replace_char, new_char)
+                                    // TODO
+                                    make_lower_or_upper(path, new_path, all_flag)
+                                {
                                     error!(
                                         "Unable to rename {}. Error: {}",
                                         path.display().to_string().italic(),
@@ -239,10 +262,108 @@ fn replace_chars(mut args: Vec<&str>, arg_flag: bool) -> io::Result<()> {
                                 }
                             }
                         }
+                    } else {
+                        println!("{} {}", "[❌]".dimmed(), "Nevermind then".bold().dimmed());
+                        process::exit(0);
                     }
                 } else {
-                    println!("{} {}", "[❌]".dimmed(), "Nevermind then".bold().dimmed());
-                    process::exit(0);
+                    error!("Path is not a file or directory");
+                    process::exit(1);
+                }
+                // DONE
+            } else if args.len() == 3 {
+                let replace_char = args[1];
+                let new_char = args[2];
+                if path.is_file() {
+                    let new_name = get_new_name(replace_char, new_char, path);
+
+                    if new_name.is_empty() {
+                        return Err(io::Error::from(io::ErrorKind::InvalidData));
+                    } else {
+                        let new_path = Path::new(&new_name);
+                        if path == new_path {
+                            println!(
+                                "{} {} {}",
+                                "[🤨]".dimmed(),
+                                "The filename wouldn`t change".purple().bold(),
+                                "💥",
+                            );
+                            return Ok(());
+                        } else if let Err(err) =
+                            rename_file(path, new_path, all_flag, replace_char, new_char)
+                        {
+                            error!(
+                                "Unable to rename {}. Error: {}",
+                                path.display().to_string().italic(),
+                                err
+                            );
+                            process::exit(1);
+                        }
+                    }
+                } else if path.is_dir() {
+                    let msg = format!(
+                        "{} {} {}{}{} {} {}{}{} {} {}{}{} {}",
+                        "[❓]".dimmed(),
+                        "Do you really want to replace all".red().bold(),
+                        "[ \'".yellow(),
+                        replace_char,
+                        "\' ]".yellow(),
+                        "with".red().bold(),
+                        "[ \'".yellow(),
+                        new_char,
+                        "\' ]".yellow(),
+                        "in all files in".red().bold(),
+                        "[ \'".yellow(),
+                        path.display().to_string().italic(),
+                        "\' ]".yellow(),
+                        "? (y/n)".red().bold(),
+                    );
+
+                    if confirm(&msg) {
+                        if fs::read_dir(path)?.count() == 0 {
+                            warn!(
+                                "The given Directory {} is empty",
+                                path.display().to_string().italic()
+                            );
+                        }
+
+                        for entry in fs::read_dir(path)? {
+                            let entry = entry?;
+
+                            if entry.path().is_file() {
+                                let new_name = get_new_name(replace_char, new_char, &entry.path());
+                                if new_name.is_empty() {
+                                    continue;
+                                } else {
+                                    let new_path = Path::new(&new_name);
+                                    if entry.path() == new_path {
+                                        continue;
+                                    } else if let Err(err) = rename_file(
+                                        entry.path().as_path(),
+                                        new_path,
+                                        all_flag,
+                                        replace_char,
+                                        new_char,
+                                    ) {
+                                        error!(
+                                            "Unable to rename {}. Error: {}",
+                                            path.display().to_string().italic(),
+                                            err
+                                        );
+                                        process::exit(1);
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        println!("{} {}", "[❌]".dimmed(), "Nevermind then".bold().dimmed());
+                        process::exit(0);
+                    }
+                } else {
+                    error!(
+                            "Missing command or at least one required argument: [CHAR_TO_REPLACE] [NEW_CHAR]"
+                        );
+                    process::exit(1);
                 }
             } else {
                 error!("Path is not a file or directory");
@@ -254,7 +375,7 @@ fn replace_chars(mut args: Vec<&str>, arg_flag: bool) -> io::Result<()> {
         }
     } else {
         error!(
-            "Missing path argument. The path to the file or directory must be the last argument."
+            "Missing path argument. The path to the file or directory must be the first argument."
         );
         process::exit(1);
     }
@@ -403,6 +524,18 @@ fn rename_file(
         }
     }
 
+    Ok(())
+}
+
+// TODO
+fn show_lower_or_upper_name(path: &Path, uppercase_flag: bool, lowercase_flag: bool) -> String {
+    println!("TODO");
+    String::new()
+}
+
+// TODO
+fn make_lower_or_upper(path: &Path, new_path: &Path, all_flag: bool) -> io::Result<()> {
+    println!("TODO");
     Ok(())
 }
 
