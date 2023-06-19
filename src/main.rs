@@ -2,9 +2,9 @@
 // TODO add arg: show output as table
 // TODO add arg: show no output
 use clap::{Arg, ArgAction, Command};
-use colored::*;
 use flexi_logger::{detailed_format, Duplicate, FileSpec, Logger};
 use log::{error, warn};
+use owo_colors::colored::*;
 
 use std::{
     env, fs, io,
